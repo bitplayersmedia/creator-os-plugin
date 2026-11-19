@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "creator-os": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/server.mjs"]
+    }
+  }
+}

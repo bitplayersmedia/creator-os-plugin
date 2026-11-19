@@ -1,0 +1,9 @@
+{
+  "name": "creator-os",
+  "version": "0.1.1",
+  "description": "Lets your own Claude Code session do the jobs your Creator OS workspace queues for your AI influencer personas.",
+  "author": {
+    "name": "Bit Players Media LLC",
+    "email": "accounts@bitplayersmedia.com"
+  }
+}
