@@ -509,16 +509,38 @@ def has_ass_filter(filters_output):
     return bool(re.search(r"^\s*\S+\s+ass\s", filters_output, re.M))
 
 
+def supports_ass(path):
+    if not path or not (os.path.isfile(path) and os.access(path, os.X_OK)):
+        return False
+    try:
+        filters = subprocess.run([path, "-hide_banner", "-filters"], capture_output=True, text=True)
+    except OSError:
+        return False
+    return filters.returncode == 0 and has_ass_filter(filters.stdout)
+
+
+def homebrew_ffmpeg():
+    if sys.platform != "darwin" or not shutil.which("brew"):
+        return None
+    try:
+        prefix = subprocess.run(["brew", "--prefix", "ffmpeg-full"], capture_output=True, text=True)
+    except OSError:
+        return None
+    if prefix.returncode == 0 and prefix.stdout.strip():
+        return str(Path(prefix.stdout.strip()) / "bin" / "ffmpeg")
+    return None
+
+
 def ffmpeg_full():
     path, source = resolve_ffmpeg()
-    if not path:
-        die("ffmpeg not found on PATH. " + LIBASS_HINT)
-    if not (os.path.isfile(path) and os.access(path, os.X_OK)):
-        die(f"FFMPEG_FULL is set to {path}, which is not an executable file. " + LIBASS_HINT)
-    filters = subprocess.run([path, "-hide_banner", "-filters"], capture_output=True, text=True).stdout
-    if not has_ass_filter(filters):
-        die(f"{path} (from {source}) has no `ass` filter: it was built without libass. " + LIBASS_HINT)
-    return path
+    if supports_ass(path):
+        return path
+    if source == "PATH":
+        candidate = homebrew_ffmpeg()
+        if supports_ass(candidate):
+            return candidate
+    problem = f"{path} (from {source}) has no usable ass filter or is not executable." if path else "ffmpeg was not found."
+    die(problem + " " + LIBASS_HINT)
 
 
 def ffprobe_for(ffmpeg):

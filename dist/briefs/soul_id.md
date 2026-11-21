@@ -6,7 +6,9 @@ Skills to use: `charsheet-soul`.
 
 ## What to do
 
-`input.portrait` is the chosen portrait (a media id; the file is in `inputs/`). Build the character sheet from it, generate the training stills, train the Soul ID with Higgsfield through its hosted MCP (see the Soul ID section of the `charsheet-soul` skill), run three test generations, and make the profile picture. `input.note`, when present, is the owner's remark.
+In the Claude Code plugin, use the images recipe listed under “This job” for generation and Soul ID training.
+
+`input.portrait` is the chosen portrait (a media id; the file is in `inputs/`). Build the character sheet from it, generate the training stills, train a Soul ID if the configured route supports it (see `charsheet-soul`), run three test generations, and make the profile picture. `input.note`, when present, is the owner's remark.
 
 ## Write `result.json`
 
@@ -20,9 +22,9 @@ Files in `outputs/`: the sheet, three test images, the profile picture.
 
 `spend` is the credits this job used on each paid service (leave a service out when it used none).
 
-If the Higgsfield tools connected to this session cannot train a Soul ID (a missing tool, a refused account or no credits), do not fake a `ref`: write the error below with `retry: false`, and say in `what` and `todo` which step failed and what the person can do in Higgsfield.
+If the configured route does not support training, make the sheet, three test images and profile using the selected portrait and sheet as references. Return `"type": "reference", "ref": "reference"`, include the same output files, and omit `spend` when free. Use a trained type only for an actual trained reference.
 
-`type` is one of the soul types the skill reports (`soul_2` by default). The client uploads `sheet`, the three `soul_test` images and `profile`, and swaps the names for media ids.
+Trained types are `soul_2` and `soul_cinematic`. The client uploads `sheet`, the three `soul_test` images and `profile`, and swaps the names for media ids.
 
 ## Progress
 

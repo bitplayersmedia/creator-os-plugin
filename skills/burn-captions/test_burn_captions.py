@@ -4,6 +4,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).parent))
 import burn_captions as bc  # noqa: E402
@@ -215,6 +217,24 @@ class FfmpegLookup(unittest.TestCase):
 
     def test_none_when_missing(self):
         self.assertEqual(bc.resolve_ffmpeg({}, lambda name: None), (None, "PATH"))
+
+    def test_homebrew_fallback_checks_for_ass(self):
+        with (patch.object(bc, "resolve_ffmpeg", return_value=("/plain/ffmpeg", "PATH")),
+              patch.object(bc, "supports_ass", side_effect=[False, True]) as ass,
+              patch.object(bc.shutil, "which", return_value="/bin/brew"),
+              patch.object(bc.sys, "platform", "darwin"),
+              patch.object(bc.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout="/brew/full\n")) as brew):
+            self.assertEqual(bc.ffmpeg_full(), "/brew/full/bin/ffmpeg")
+            self.assertEqual(ass.call_count, 2)
+            self.assertEqual(brew.call_args.args[0], ["brew", "--prefix", "ffmpeg-full"])
+
+    def test_explicit_override_never_falls_back(self):
+        with (patch.object(bc, "resolve_ffmpeg", return_value=("/override", "FFMPEG_FULL")),
+              patch.object(bc, "supports_ass", return_value=False),
+              patch.object(bc, "homebrew_ffmpeg") as brew, patch.object(bc.sys, "stderr")):
+            with self.assertRaises(SystemExit):
+                bc.ffmpeg_full()
+            brew.assert_not_called()
 
     def test_ass_filter_detection(self):
         self.assertTrue(bc.has_ass_filter(" T.. ass               V->V       Render ASS subtitles\n"))

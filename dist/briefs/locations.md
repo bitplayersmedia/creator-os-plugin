@@ -6,6 +6,8 @@ Skills to use: `ugc-influencer-video` (its still-image and location steps), `cha
 
 ## What to do
 
+In the Claude Code plugin, use the images recipe listed under “This job” for generation.
+
 `input.locations` lists the places (`slug`, `name`, `notes`), up to four. If `input.only` is set, make that one place only. `input.prompt`, when present, says what to change. Each picture is an empty room or a clear setting the persona films in: a clean, well-lit backdrop for talking-head video, vertical (9:16).
 
 ## Write `result.json`

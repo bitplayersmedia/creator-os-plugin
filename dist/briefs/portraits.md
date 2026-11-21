@@ -6,6 +6,8 @@ Skills to use: `charsheet-soul`.
 
 ## What to do
 
+In the Claude Code plugin, use the images recipe listed under “This job” for generation.
+
 Make six portraits of the persona in the base outfit (`input.bible.outfits[0]`), round `input.round`. `input.prompt`, when present, says what to change from the last round. Use the character-sheet workflow of `charsheet-soul`: one consistent face, six different poses and expressions.
 
 ## Write `result.json`

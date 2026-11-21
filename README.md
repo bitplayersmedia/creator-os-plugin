@@ -17,8 +17,7 @@ You need four things:
   start and Claude shows no Creator OS tools.
 - **A Creator OS account** where you are the owner or an admin. Only they see Settings, Connect Claude, which gives the
   code that links your computer.
-- **A Higgsfield account with credits**, for pictures and video (see "What the jobs need" below). Writing jobs spend
-  nothing.
+- **A way to make pictures, videos and voices** from your Claude Code session. Setup tests your routes and saves the steps.
 
 ## Install
 
@@ -49,7 +48,7 @@ in Creator OS under Settings. Either one ends the link. `disconnect` deletes the
 Settings revoke, the plugin deletes it the next time it calls the site.
 
 **What it can and cannot touch.** It reads and writes the job folder on this computer
-(`~/creator-os-jobs/<job id>` unless you chose another) and calls your Creator OS site. It asks before writing a file
+(under `~/creator-os-jobs/` unless you chose another location) and calls your Creator OS site. It asks before writing a file
 outside the job folder. It never starts another Claude and never touches your Claude sign-in.
 
 ## Your first video
@@ -59,12 +58,13 @@ About fifteen minutes, plus the waiting for pictures and video. Keep Creator OS 
 1. **Get a code.** In Creator OS open Settings, then Connect Claude, and press "Get a code". You see a code like
    `AB3D-EF7H` and the word WAITING. The code is good for 10 minutes and works once.
 2. **Link this computer.** In Claude Code type `/creator-os:setup`. When Claude asks, give it the code. Claude answers
-   `Linked to <your studio>.` Settings now says LINKED. If you use a Creator OS site other than the plugin's default one,
+   `Linked to <your studio>.` Settings now says LINKED. If you use a Creator OS site other than the default (`https://creator-os.stream`),
    give Claude its address when it asks (for example `https://example.com`).
-3. **Check your tools.** Setup then looks at your picture and video tool (Higgsfield) with one real call each, and asks
-   how many credits Creator OS may use each time you run `/creator-os:work`. Say a number above 0 to allow spending;
-   0 (the default) means it never spends, and every picture and video job will be skipped. Setup tells Creator OS what
-   is ready, so the website stops asking you to run setup again.
+3. **Test and save your routes.** Setup asks how you make pictures, videos and voices, one at a time. Claude
+   creates and shows you a sample from each route and saves the working steps as your recipes. Voice setup offers
+   Higgsfield voice change for keeping one voice across shots, about 1–2 credits per shot. If any route uses credits,
+   set a cap per `/creator-os:work` run. Free jobs run with a cap of 0. Change just one route later with
+   `/creator-os:setup images`, `/creator-os:setup video` or `/creator-os:setup voice`.
 4. **Make a persona on the website.** Start a new persona in Creator OS and fill in the first steps. This queues the
    writing job for the persona. Nothing happens until Claude works the queue.
 5. **Let Claude work.** In Claude Code type `/creator-os:work`. Claude takes the oldest waiting job, does it, uploads the
@@ -85,20 +85,21 @@ Keep Claude Code open while it works; if you close it, see "Troubleshooting" bel
 What it does today:
 
 - `/creator-os:setup` links this computer to your studio. You type the code from Settings, Connect Claude, and the plugin
-  saves a token in a private file on this computer (never shown, never in a chat). It then checks your picture and video
-  tool and tells Creator OS what is ready.
+  saves a token in a private file on this computer (never shown, never in a chat). It then tests your picture, video and voice
+  routes and tells Creator OS what is ready.
 - `/creator-os:work` does the queued jobs. It takes the oldest waiting job (`next_job`), which becomes a folder with a
   `JOB.md` brief, hands it to a subagent, uploads the files in `outputs/` and sends the result (`complete`), then takes the next. `/creator-os:work watch` keeps
   looking when the queue is empty, with `sleep` between looks (a minute, then two, five and ten); press Esc to stop.
-- The MCP server (built on the official MCP SDK) has eleven tools: `pair`, `save_setup`, `check_tools`, `status` and `disconnect` for the
+- The MCP server (built on the official MCP SDK) has twelve tools: `pair`, `save_setup`, `check_tools`, `save_recipe`, `status` and `disconnect` for the
   link, and `next_job`, `progress`, `upload`, `complete`, `fail` and `stop` for the work.
 - While a job is held the plugin renews its 15-minute lease every 5 minutes. If your session ends mid-job the job goes
   back in the queue when the lease runs out, and the next `next_job` picks up a job that is still yours.
 - A small hook asks you before the session writes a file outside the held job's folder. It adds a question and never
   blocks; shell commands are not covered.
 
-Full-quality files stay in the job folder on this computer (`~/creator-os-jobs/<job id>` unless you chose another folder);
-only the review copy of each result file is uploaded. Google Drive comes later. A paid picture or video service is called
+Full-quality files stay in the job folder on this computer. Each claim gets a fresh folder. If the job ID is already
+taken, the new folder name includes a suffix and earlier files stay in place.
+Only the review copy of each result file is uploaded. Google Drive comes later. A paid picture or video service is called
 only after you say yes in the session.
 
 The server is quiet: starting it and listing its tools call nothing over the network, and nothing runs in the background
@@ -114,11 +115,12 @@ until you run `disconnect`, an owner revokes it in Settings, or it sits idle for
 
 The video jobs lean on a few things that live outside the plugin:
 
-- **A Higgsfield account with credits**, connected through Higgsfield's hosted MCP at `https://mcp.higgsfield.ai/mcp`
-  with your own account. For example `claude mcp add --transport http higgsfield https://mcp.higgsfield.ai/mcp`,
-  then sign in with `/mcp`. Higgsfield's own skills are not bundled in this plugin.
-- **For the finish job:** `ffmpeg` built with libass, `python3`, and the `openai-whisper` command line tool, all on
-  your `PATH`.
+- **The media routes from setup.** Jobs follow your saved recipes. The recipes live in the plugin data folder and
+  survive plugin updates. Higgsfield is an option. If your recipe uses its hosted MCP, connect your account at
+  `https://mcp.higgsfield.ai/mcp` and sign in with `/mcp`.
+- **For face setup**, an image route can train a Soul ID or build a reference face from pictures.
+- **For the finish job**, install `python3`, `openai-whisper` and ffmpeg with libass. The caption script honors
+  `FFMPEG_FULL` and finds Homebrew’s `ffmpeg-full` if the PATH build is missing or lacks the `ass` filter.
 
 ## Troubleshooting
 
@@ -128,10 +130,10 @@ Find what you see in the left column. Messages in quotes are the exact words the
 |---|---|
 | Claude has no `/creator-os:setup` or `/creator-os:work`, or Creator OS tools are missing, or `/mcp` says the creator-os server failed | Restart Claude Code after installing. Then check `node --version`: it must be 22.18 or newer. An older Node prints "creator-os: needs Node 22.18 or newer, found <your version>" and the server stops. Install a newer Node from nodejs.org, then restart Claude Code. On WSL2, run `node --version` inside WSL2, not in Windows |
 | "That code is not valid. Ask for a new one." | The code was typed wrong, is older than 10 minutes, was already used, or belongs to another Creator OS site. Wrong and expired codes get the same answer on purpose. In Settings, Connect Claude, press "Get a code" again, run `/creator-os:setup` and type the new code. If you use a site other than the plugin's default, give Claude its address when it asks, or set `CREATOR_OS_SITE` before starting Claude Code |
-| "That site address is not a web address. Use the full address, for example https://example.com." | Type the whole address, starting with `https://` |
+| "Use a Creator OS site address starting with https://. For local development, http:// is allowed on loopback addresses." | Type the whole address, starting with `https://` |
 | "Too many wrong codes. Wait a few minutes and ask for a new one." | Ten wrong tries from one connection lock pairing for about 10 minutes. Wait, get a new code and type it carefully |
 | "Could not reach <site>. Check the connection and try again." | This computer cannot reach the site. Check your internet and the address, then run `/creator-os:setup` again |
-| The website keeps saying "Run /creator-os:setup again in Claude before anything can be made. Missing: <what is missing>." (an image tool, a video tool or a storage choice) | Creator OS has not been told your tools are ready. Either a tool check failed (Higgsfield is not connected in this session, or its sign-in ran out) or setup ran while offline. Connect Higgsfield (`/mcp`), run `/creator-os:setup` again and let it finish the tool check. The plugin tells you if the site could not be reached: "The site could not be reached, so Creator OS still shows setup as missing. Run /creator-os:setup again when you are online." |
+| The website keeps saying "Run /creator-os:setup again in Claude before anything can be made. Missing: <what is missing>." | Run setup for the missing kind, or run full setup for storage. If setup reports a site connection error, run it again when online. |
 | Setup ended with "Not linked yet: run pair first." | The link step did not finish. Run `/creator-os:setup` again and give it a fresh code |
 | "Skipped: the spend cap is 0 (no spending). Run /creator-os:setup to allow credits." | The spend cap is 0, so Creator OS never spends. Run `/creator-os:setup` again and give a number of credits above 0. The job stays queued and nothing is lost |
 | "Skipped: the <images or video> tool is missing or its last check failed. Run /creator-os:setup again." | Same as the setup row above: connect the tool, run setup again |
@@ -142,16 +144,16 @@ Find what you see in the left column. Messages in quotes are the exact words the
 | The answer ends "daily job limit is reached. Try again tomorrow." | Your studio hit its limit for the day. Nothing is broken; try tomorrow |
 | Claude Code closed or crashed in the middle of a job | Nothing is lost. The job goes back in the queue by itself after up to 15 minutes, once its lease runs out. Open Claude Code and run `/creator-os:work` again; it picks up the same job. If the job is still yours it carries on; otherwise it is claimed again as a new try |
 | "Creator OS has taken this job back (cancelled, done elsewhere or its lease ran out). Stop work on it; call next_job for the next one." | You cancelled the job on the website, or it sat too long. Let Claude go on to the next job |
-| The finish job fails or stops, saying `ffmpeg`, `python3` or `whisper` is missing | The finish step burns captions into the video and needs three programs on your PATH: `ffmpeg` built with libass, `python3`, and the `whisper` command (`pip install openai-whisper`; the first run downloads a model of about 460 MB). On macOS with Homebrew: `brew install ffmpeg-full`. Install them, then press Retry on the job in Creator OS and run `/creator-os:work` |
-| Pictures or videos do not start | Higgsfield is not connected in this session, or has no credits. Add it with `claude mcp add --transport http higgsfield https://mcp.higgsfield.ai/mcp`, sign in with `/mcp`, and run `/creator-os:setup` again |
-| You want to see the full-quality files, or to use Google Drive | Full-quality files stay on this computer in `~/creator-os-jobs/<job id>` (or the folder you chose in setup). Only a review copy goes to Creator OS. Google Drive comes later |
+| The finish job says `ffmpeg`, `python3` or `whisper` is missing | Install the missing program. On macOS with Homebrew, `brew install ffmpeg-full` gives the caption script a libass build. Install Whisper with `pip install openai-whisper`. Then retry the job. |
+| A job waits for a pictures, videos or voices recipe | Run the setup command shown, then run `/creator-os:work` again. The job stayed queued. |
+| You want to see the full-quality files, or to use Google Drive | Look in the job folder named by `next_job`, under `~/creator-os-jobs/` or the location you chose in setup. Only a review copy goes to Creator OS. Google Drive comes later |
 
 **Linux and WSL2.** The plugin keeps its link in Claude Code's plugin data folder (`~/.config/creator-os` when Claude Code gives none) and job
 files in `~/creator-os-jobs`, inside your Linux (or WSL2) home folder. Run Claude Code, Node and the finish tools inside the same Linux or WSL2 shell; a Claude
 Code in Windows and a Node in WSL2 do not see each other. Install `ffmpeg` and `python3` with your package manager
 (for example `sudo apt install ffmpeg python3`), and check that your ffmpeg has libass (`ffmpeg -filters | grep ass`).
 
-**Still stuck?** Run `/creator-os:setup` again. It is safe to repeat: a new code replaces the old link.
+**Still stuck?** Run `/creator-os:setup` again. Setup keeps each existing recipe until its replacement works.
 
 ## Licence
 

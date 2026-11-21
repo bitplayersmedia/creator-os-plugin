@@ -19,27 +19,27 @@ the queue is empty.
 
 1. Call `next_job` (add `watch: true` in watch mode). If the user named a job type or a persona, pass `type` or
    `personaId`. If the answer says this computer is not linked, tell the user to run `/creator-os:setup` and stop.
-2. If the answer is "No jobs are waiting", tell the user and stop (or see step 5). Otherwise it names the job, its
+2. If the answer says jobs wait for a recipe, show the setup commands and stop. The jobs stay queued. If it is "No jobs are waiting", tell the user and stop (or see step 5). Otherwise it names the job, its
    folder and gives the whole `JOB.md`. Hold one job at a time: never call `next_job` again before this job is finished.
-3. Read the `Spend` line in `JOB.md`. If it says the job spends nothing, go to the brief below. If it is the paid line,
-   first call `check_tools` with `job: { kind, cost, spent }` (`kind` images, video or voice; `cost` the credits the job
-   is expected to use; `spent` the credits used so far in this run). If the answer starts with `Skipped:`, tell the user
-   that line, call `stop` (the job goes back in the queue; it is not failed) and end this run, since the same job would come
-   back. Only `OK:` goes on. Add the credits a job really used to `spent`. Then you (the main session, not the subagent: a subagent cannot ask the user or wait)
-   tell the user which paid service
-   the job will use and about what it will cost, and wait for their yes. On a yes, the brief says so. On a no, or no
-   answer, call `fail` with the reason "The user did not approve spending" and `retry: false` (so the same job is not
-   taken and asked about again; the user can Retry it in Creator OS), then go to step 1.
-   Hand the job to a subagent (the Agent tool) with the folder path and this brief: "Read `<folder>/JOB.md` and do the
-   job. Work only inside `<folder>`. Write `progress.json` as you go and `result.json` when done. Put every file you
-   make in `outputs/`." For a free job add: "This job spends nothing." For a paid job the user approved add: "The user
-   approved spending for this job: you may call <the service they approved> and nothing else paid." For a paid job
-   not yet approved add: "Do not call a paid service. If the job needs one, stop and write what it would use." If a
-   subagent cannot be used, do the job in this session the same way.
+3. Read `JOB.md` and the recipes it lists under "This job". Follow their routes, including any voice-change
+   choice. Use Higgsfield only when a recipe calls for it. Estimate the action count and credit cost for each paid
+   step from the recipe and the job input. A job with only free steps needs no spend cap check.
+   Before handing off a paid step, call `check_tools` with `job: { kind, cost, spent }`. Use its recipe kind
+   (images, video or voice), the estimated credits for that step and the credits already used or approved for
+   outstanding steps in this run. Only a response containing an `OK:` line goes on. If it has a `Skipped:` line,
+   show it, call `stop` to return the job to the queue, and end this run.
+   Tell the user the service and expected cost, then wait for their yes. On a no or no answer, call `fail` with
+   “The user did not approve spending” and `retry: false`, then go to step 1.
+   Hand the job to a subagent with the folder path and this brief: “Read `JOB.md` and its recipes and do the job.
+   Work only inside this folder. Write `progress.json` and `result.json` and put generated files in `outputs/`.”
+   Include the approved steps, services and credit ceilings. For a free job say that it may not spend.
+   If the subagent cannot use the chosen tools, do the job in this session under the same rules.
 4. When the subagent returns, check that `<folder>/result.json` exists. If it does not and the subagent reports it
-   needs a paid service you have not approved, go back to step 3: ask the user, and on a yes send the subagent
-   again (a new subagent is fine) with the approval line. If it does not exist for another reason, have the subagent
+   needs a paid service you have not approved, go back to step 3 for that step only. On approval, have the subagent
+   continue with the files already made. If it does not exist for another reason, have the subagent
    finish the job, or call `fail`. Never call `complete` without a `result.json`.
+   Track actual credits used across jobs in this run, including failed attempts. For a new paid step, include credits already used in this job
+   in the cap check.
    Then call `complete` with no `result`: it reads `result.json`, uploads the files that name,
    checks the result and sends it. If the answer says the result is not valid, fix `result.json` (or have the subagent
    fix it) and call `complete` again. If the job cannot be done, call `fail` with a plain reason (`retry: true` only

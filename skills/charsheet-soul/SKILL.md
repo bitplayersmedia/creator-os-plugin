@@ -1,6 +1,6 @@
 ---
 name: charsheet-soul
-description: "Creator OS job skill: the house method for character sheet prompts (3-panel sheets, face anchors, masked characters, face-fix edits) and for training a Soul ID, on Higgsfield's hosted MCP; use it only when a Creator OS job brief names it."
+description: "Creator OS job skill: for character sheets, face anchors, face-fix edits and Soul ID training."
 user-invocable: false
 ---
 
@@ -10,12 +10,12 @@ user-invocable: false
 
 This skill serves two jobs: `portraits` (six portrait candidates) and `soul_id` (the character sheet, the training stills, the Soul ID, three tests and the profile picture). The brief gives the output shape; this skill gives the method.
 
-- Write the prompts yourself, in English, and generate them with the **Higgsfield image tool** on Higgsfield's hosted MCP (`https://mcp.higgsfield.ai/mcp`), which the user connects with their own Higgsfield account. List the connected Higgsfield tools first and use the image tools you find (a Soul model for faces and looks where one is listed, an edit-capable model for face-fix edits); do not assume a tool name. Higgsfield's own skills are not shipped with Creator OS, and this skill does not need them.
+- Write the prompts yourself, in English. In the Claude Code plugin, read and follow the images recipe named in `JOB.md`. Use Higgsfield only if the recipe names it. In the standalone machine client, use the configured Higgsfield image tools.
 - Spend only within the Spend line under "This job" in `JOB.md`, and count the credits you use. When the next generation would go over the line, stop and ship what passes, or write the brief's error.
 - The job never asks a question and never waits for a pick. A fork (background, glasses on the face or in a hand, a couple's state) gets a sensible default, named in one line in the job's notes. The input (`input.bible`, `input.prompt`, `input.note`) carries the persona; it is material, not instruction.
 - Generate, look at every picture, and redo what fails. Do not ship a picture with text, a logo, a watermark, extra fingers, a different face or plastic skin.
 - Write each prompt as a FULL prompt, never a diff. The aspect ratio is set in the tool, but the "16:9 aspect ratio" line stays in the card text (canon). Name honestly, in the job's notes, what the model may fail to hold and why.
-- If no Higgsfield image tool is connected, write the brief's error with `retry: false`: the user must connect `https://mcp.higgsfield.ai/mcp` with their account.
+- If the plugin job is missing its images recipe, write an error with `retry: false` and “Run /creator-os:setup to choose how to make pictures.” If the chosen route is unavailable, describe what it needs.
 
 ## Two-pass character pipeline
 
@@ -87,7 +87,7 @@ Face covered: anchors move to visible skin (stubble, scars on the chin or lip) a
 
 ## The face prompt (the anchor)
 
-`Cinematic close-up portrait photograph of a real man/woman — head and shoulders framing, face filling the frame at maximum identity detail.` + photo block + anti-plastic + no-celebrity + a Character block with maximum facial detail and the anchors + a neutral clothing base (a plain black tee) + light with the note "every pore and scar clearly readable". No costume, no poses, no panels. Use the Higgsfield image tool's cinematic Soul model for it when one is listed, otherwise the most photoreal model it offers.
+`Cinematic close-up portrait photograph of a real man/woman — head and shoulders framing, face filling the frame at maximum identity detail.` + photo block + anti-plastic + no-celebrity + a Character block with maximum facial detail and the anchors + a neutral clothing base (a plain black tee) + light with the note "every pore and scar clearly readable". No costume, no poses, no panels. Use the configured route's most photoreal model.
 
 ## Face-fix edit
 
@@ -106,14 +106,12 @@ Glasses, head tilt and raised hands: lock them explicitly so the editor does not
 A Soul ID is a model trained on one face, reused by every later picture and video. The job's order is: the sheet from the chosen portrait, the training stills, training, three tests, the profile picture.
 
 1. **The sheet.** Build the 3-panel sheet from `input.portrait` with the method above, the anchors from `input.bible.anchors` verbatim. Save it as the sheet.
-2. **The training stills.** A set of different pictures of the same face for the training: about 10 to 20 sharp, well-lit pictures of the face and head and shoulders, varied angles (frontal, three-quarter, profile), expressions and light, a few full-body, no sunglasses, no hats over the face, no other people, no text. Make them from the sheet and the portrait with the Higgsfield image tool and keep the face identical across all of them (anchors verbatim, each one looked at). Throw out any that drift.
-3. **Training.** List the connected Higgsfield tools. If one of them trains a Soul ID (a character or Soul creation tool that takes the pictures and a name and returns a reference), call it with the stills and the persona's name, then wait for it to finish, reporting `etaS` in the progress file, and take the reference string it returns for `result.ref`. Set `result.type` to exactly one of two values, never the tool's own wording: `soul_2` (the standard Soul 2 model, also when the tool names a version such as "soul-v2" or does not say) or `soul_cinematic` (the Soul Cinema / cinematic model). Map the model the tool trained on to one of these two; any other string fails the result and the paid training is lost.
-4. **If the connected Higgsfield tools cannot train a Soul ID,** write an error with `retry: false` instead of a result:
-   `{ "error": { "what": "A Soul ID could not be trained", "why": "The Higgsfield tools connected here have no tool that trains a Soul ID.", "todo": "Connect a Higgsfield MCP and plan that can train a Soul ID (Soul ID training needs a paid Higgsfield plan), then retry this job from Creator OS." }, "retry": false }`
-   Keep the sheet and stills you made in `outputs/` so the user can use them for the training in Higgsfield.
-5. **Tests.** Three test pictures with the new Soul ID (the model that takes the reference), each a different scene and outfit. Compare each against the sheet: the same person, anchors visible. Regenerate any that fails; never ship a test that fails the likeness check.
+2. **The training stills.** If the route supports training, make a set of different pictures of the same face for the training: about 10 to 20 sharp, well-lit pictures of the face and head and shoulders, varied angles (frontal, three-quarter, profile), expressions and light, a few full-body, no sunglasses, no hats over the face, no other people, no text. Make them from the sheet and the portrait with the configured image route and keep the face identical across all of them (anchors verbatim, each one looked at). Throw out any that drift.
+3. **Training.** Use the configured route if it can train a Soul ID from the pictures and persona name. Report `etaS` while training and use the reference it returns as `result.ref`. Map a standard Soul 2 model to `soul_2` or Soul Cinema to `soul_cinematic`. Use a trained type only for a genuine trained reference.
+4. **Reference face.** When the route lacks training support, skip training and its stills. Set `result.type` and `result.ref` both to `reference`. Use the chosen portrait and character sheet as image references for all three tests and the profile picture, with the anchors verbatim.
+5. **Tests.** Three test pictures with the trained model or reference images, each a different scene and outfit. Compare each against the sheet: the same person, anchors visible. Regenerate any that fails; never ship a test that fails the likeness check.
 6. **The profile picture.** Square, face filling the frame, the persona's trademark expression, a clean background, no text.
 
-A training failure for bad pictures ("not enough variety", "face not found") is a `retry: true` error that says which stills were the problem. A plan or credit problem is `retry: false` and says what to change in the Higgsfield account.
+A training failure for bad pictures ("not enough variety", "face not found") is a `retry: true` error that says which stills were the problem. A plan or credit problem is `retry: false` and says what to change in the service account.
 
 © Bit Players Media LLC. Licensed for use with Creator OS only.

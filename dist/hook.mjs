@@ -259,7 +259,7 @@ var BIBLE_KEYS = Object.keys(BIBLE_SHAPE);
 // src/shared/kit.ts
 var ZOOM_VALUES = ["soft", "hard"];
 var CAPTION_PRESET_VALUES = ["persona", "bold", "clean"];
-var SOUL_TYPE_VALUES = ["soul_2", "soul_cinematic"];
+var SOUL_TYPE_VALUES = ["soul_2", "soul_cinematic", "reference"];
 var SOUL_STATUS_VALUES = ["training", "ready", "approved", "rejected"];
 var MediaIdSchema = s.string(1, 60);
 var CaptionStyleSchema = s.object({
@@ -411,6 +411,8 @@ var VIDEO_INPUT = {
     bible: s.object({ anchors: anchors2, ethnicity: ethnicity2, look: look2 }),
     kit: s.object({
       soulRef: s.string(1, 200),
+      soulType: s.optional(s.enum(SOUL_TYPE_VALUES)),
+      profile: s.optional(MediaIdSchema),
       voiceRef: s.optional(s.string(1, 200)),
       portrait: MediaIdSchema,
       sheet: MediaIdSchema,

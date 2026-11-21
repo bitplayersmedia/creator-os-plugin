@@ -32050,7 +32050,7 @@ var require_utils = __commonJS({
   "node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
-    var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
+    var isIPv42 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
     var isPort = RegExp.prototype.test.bind(/^\d*$/u);
     var isHexPair = RegExp.prototype.test.bind(/^[\da-f]{2}$/iu);
     var isUnreserved = RegExp.prototype.test.bind(/^[\da-z\-._~]$/iu);
@@ -32151,7 +32151,7 @@ var require_utils = __commonJS({
         const part = parts2[i];
         if (part === "") return void 0;
         if (part.indexOf(".") !== -1) {
-          if (i !== parts2.length - 1 || compression !== -1 && right.length === 0 || !isIPv4(part)) return void 0;
+          if (i !== parts2.length - 1 || compression !== -1 && right.length === 0 || !isIPv42(part)) return void 0;
           hextetCount += 2;
           continue;
         }
@@ -32533,7 +32533,7 @@ var require_utils = __commonJS({
       }
       if (component.host !== void 0) {
         let host = component.host;
-        if (!isIPv4(host)) {
+        if (!isIPv42(host)) {
           let ipV6res = normalizeIPv6(host);
           if (ipV6res.isIPV6 !== true && ipV6res.isIPVFuture !== true) {
             host = normalizePercentEncoding(host, true);
@@ -32571,7 +32571,7 @@ var require_utils = __commonJS({
       escapePreservingEscapes,
       removeDotSegments,
       removeDotSegmentsRelative,
-      isIPv4,
+      isIPv4: isIPv42,
       isUUID,
       normalizeIPv6,
       stringArrayToHexStripped
@@ -32794,7 +32794,7 @@ var require_schemes = __commonJS({
 var require_fast_uri = __commonJS({
   "node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
-    var { normalizeIPv6, removeDotSegments, removeDotSegmentsRelative, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
+    var { normalizeIPv6, removeDotSegments, removeDotSegmentsRelative, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4: isIPv42, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
     var VALID_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*$/u;
     var MALFORMED_SCHEME_ERROR = "URI scheme is malformed.";
@@ -32841,7 +32841,7 @@ var require_fast_uri = __commonJS({
       const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
       const resolvedSchemeHandler = getSchemeHandler(options && options.scheme || resolved.scheme);
       const resolvedHost = resolved.host;
-      const resolvedHostIsIP = resolvedHost !== void 0 && resolvedHost !== "" && (isIPv4(resolvedHost) || normalizeIPv6(resolvedHost).isIPV6);
+      const resolvedHostIsIP = resolvedHost !== void 0 && resolvedHost !== "" && (isIPv42(resolvedHost) || normalizeIPv6(resolvedHost).isIPV6);
       if (hasForbiddenDomainHost(resolved, options || {}, resolvedSchemeHandler, resolvedHostIsIP)) {
         throw new Error(MALFORMED_HOST_ERROR);
       }
@@ -33114,7 +33114,7 @@ var require_fast_uri = __commonJS({
           malformedAuthorityOrPort = true;
         }
         if (parsed.host) {
-          const ipv4result = isIPv4(parsed.host);
+          const ipv4result = isIPv42(parsed.host);
           if (ipv4result === false) {
             const bracketedIPLiteral = isIPLiteral(parsed.host);
             const hasIPLiteralBracket = parsed.host.indexOf("[") !== -1 || parsed.host.indexOf("]") !== -1;
@@ -37884,7 +37884,62 @@ var init_mcp = __esm({
 var plugin_default;
 var init_plugin = __esm({
   "plugin/.claude-plugin/plugin.json"() {
-    plugin_default = { name: "creator-os", version: "0.1.1", description: "Lets your own Claude Code session do the jobs your Creator OS workspace queues for your AI influencer personas.", author: { name: "Bit Players Media LLC", email: "accounts@bitplayersmedia.com" } };
+    plugin_default = { name: "creator-os", version: "0.1.3", description: "Lets your own Claude Code session do the jobs your Creator OS workspace queues for your AI influencer personas.", author: { name: "Bit Players Media LLC", email: "accounts@bitplayersmedia.com" } };
+  }
+});
+
+// plugin/src/recipes.ts
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+function recipeWaitMessage(kind, count) {
+  return `${count} ${count === 1 ? "job waits" : "jobs wait"} for a ${MEDIA[kind]} recipe. Run /creator-os:setup ${kind}.`;
+}
+async function readRecipe(dir, kind) {
+  const value = await readFile(join(dir, recipeFile(kind)), "utf8").catch((error62) => {
+    if (error62.code === "ENOENT") return null;
+    throw error62;
+  });
+  return value?.trim() ? value : null;
+}
+async function saveRecipe(dir, { kind, text: text6 }) {
+  if (!RECIPE_KINDS.includes(kind)) throw new Error("Choose images, video or voice.");
+  if (!text6.trim() || text6.length > 24e3 || text6.trim().split(/\r?\n/).length > 150) {
+    throw new Error("A recipe must contain text and fit within 150 lines and 24,000 characters.");
+  }
+  const dest = join(dir, recipeFile(kind));
+  const recipes = join(dir, "recipes");
+  await mkdir(recipes, { recursive: true, mode: 448 });
+  const staging = await mkdtemp(join(recipes, ".save-"));
+  const file2 = join(staging, "recipe.md");
+  try {
+    await writeFile(file2, text6.trim() + "\n", { mode: 384 });
+    await rename(file2, dest);
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
+  return dest;
+}
+async function recipesFor(dir, type) {
+  return Promise.all((REQUIRED[type] ?? []).map(async (kind) => ({
+    kind,
+    file: recipeFile(kind),
+    text: await readRecipe(dir, kind).catch(() => null)
+  })));
+}
+var RECIPE_KINDS, MEDIA, REQUIRED, recipeFile;
+var init_recipes = __esm({
+  "plugin/src/recipes.ts"() {
+    "use strict";
+    RECIPE_KINDS = ["images", "video", "voice"];
+    MEDIA = { images: "pictures", video: "videos", voice: "voices" };
+    REQUIRED = {
+      portraits: ["images"],
+      soul_id: ["images"],
+      locations: ["images"],
+      voices: ["voice"],
+      generate: RECIPE_KINDS
+    };
+    recipeFile = (kind) => join("recipes", kind + ".md");
   }
 });
 
@@ -38183,7 +38238,7 @@ var init_kit = __esm({
     init_object2();
     ZOOM_VALUES = ["soft", "hard"];
     CAPTION_PRESET_VALUES = ["persona", "bold", "clean"];
-    SOUL_TYPE_VALUES = ["soul_2", "soul_cinematic"];
+    SOUL_TYPE_VALUES = ["soul_2", "soul_cinematic", "reference"];
     SOUL_STATUS_VALUES = ["training", "ready", "approved", "rejected"];
     MediaIdSchema = s.string(1, 60);
     CaptionStyleSchema = s.object({
@@ -38386,6 +38441,8 @@ var init_video = __esm({
         bible: s.object({ anchors: anchors2, ethnicity: ethnicity2, look: look2 }),
         kit: s.object({
           soulRef: s.string(1, 200),
+          soulType: s.optional(s.enum(SOUL_TYPE_VALUES)),
+          profile: s.optional(MediaIdSchema),
           voiceRef: s.optional(s.string(1, 200)),
           portrait: MediaIdSchema,
           sheet: MediaIdSchema,
@@ -38803,14 +38860,14 @@ var init_machine = __esm({
 });
 
 // machine/config.ts
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir as mkdir2, readFile as readFile2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join as join2 } from "node:path";
 async function writePrivate(dir, file2, text6) {
-  await mkdir(dir, { recursive: true, mode: 448 });
-  const tmp = join(dir, `${file2}.tmp`);
-  await writeFile(tmp, text6, { mode: 384 });
-  await rename(tmp, join(dir, file2));
+  await mkdir2(dir, { recursive: true, mode: 448 });
+  const tmp = join2(dir, `${file2}.tmp`);
+  await writeFile2(tmp, text6, { mode: 384 });
+  await rename2(tmp, join2(dir, file2));
 }
 var defaultDir, defaultJobsDir, BaseSchema, LastSchema, LastJobsSchema, queue;
 var init_config = __esm({
@@ -38818,8 +38875,8 @@ var init_config = __esm({
     "use strict";
     init_object2();
     init_machine();
-    defaultDir = () => join(homedir(), ".config", "creator-os");
-    defaultJobsDir = () => join(homedir(), "creator-os-jobs");
+    defaultDir = () => join2(homedir(), ".config", "creator-os");
+    defaultJobsDir = () => join2(homedir(), "creator-os-jobs");
     BaseSchema = s.object({
       site: s.string(1, 300),
       token: s.string(1, 300),
@@ -38837,8 +38894,8 @@ var init_config = __esm({
 });
 
 // plugin/src/held.ts
-import { readFile as readFile2, rm } from "node:fs/promises";
-import { join as join2 } from "node:path";
+import { readFile as readFile3, rm as rm2 } from "node:fs/promises";
+import { join as join3 } from "node:path";
 function uploadedOf(v) {
   if (typeof v !== "object" || v === null || Array.isArray(v)) return null;
   const out = {};
@@ -38850,7 +38907,7 @@ function uploadedOf(v) {
 }
 async function readHeld(dir) {
   try {
-    const raw = JSON.parse(await readFile2(join2(dir, FILE), "utf8"));
+    const raw = JSON.parse(await readFile3(join3(dir, FILE), "utf8"));
     if (typeof raw !== "object" || raw === null) return null;
     const uploaded = uploadedOf(raw.uploaded);
     const { id, type, lease: lease2, folder, leaseUntil, attempt } = raw;
@@ -38888,7 +38945,7 @@ var init_held = __esm({
     chain = Promise.resolve();
     put = (dir, held) => writePrivate(dir, FILE, `${JSON.stringify(held, null, 2)}
 `);
-    remove = (dir) => rm(join2(dir, FILE), { force: true });
+    remove = (dir) => rm2(join3(dir, FILE), { force: true });
     writeHeld = (dir, held) => serial(() => put(dir, held));
     clearHeld = (dir) => serial(() => remove(dir));
   }
@@ -38896,14 +38953,14 @@ var init_held = __esm({
 
 // plugin/src/paths.ts
 import { realpath, stat as stat2 } from "node:fs/promises";
-import { dirname, isAbsolute, join as join3, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join as join4, resolve, sep } from "node:path";
 async function insideOutputs(folder, name) {
   const refused = new PathRefused(`${name} is not a file inside this job's outputs/ folder. Nothing was uploaded.`);
   if (name === "" || name.includes("\0") || isAbsolute(name) || name.split(/[\\/]/).includes("..")) throw refused;
   try {
-    const outputs = await realpath(join3(folder, "outputs"));
-    if (outputs !== join3(await realpath(folder), "outputs")) throw refused;
-    const real = await realpath(join3(outputs, name));
+    const outputs = await realpath(join4(folder, "outputs"));
+    if (outputs !== join4(await realpath(folder), "outputs")) throw refused;
+    const real = await realpath(join4(outputs, name));
     if (!real.startsWith(outputs + sep) || !(await stat2(real)).isFile()) throw refused;
     return real;
   } catch (e) {
@@ -38933,15 +38990,15 @@ __export(store_exports, {
   writeSetup: () => writeSetup,
   writeToken: () => writeToken
 });
-import { readFile as readFile3, rm as rm2 } from "node:fs/promises";
-import { join as join4 } from "node:path";
+import { readFile as readFile4, rm as rm3 } from "node:fs/promises";
+import { join as join5 } from "node:path";
 function workspaceOf(v) {
   return isRecord(v) && text3(v.id) !== null && typeof v.name === "string" ? { id: String(v.id), name: v.name } : null;
 }
 async function readSetup(dir) {
   let raw;
   try {
-    raw = JSON.parse(await readFile3(join4(dir, "setup.json"), "utf8"));
+    raw = JSON.parse(await readFile4(join5(dir, "setup.json"), "utf8"));
   } catch {
     return { version: 1 };
   }
@@ -38975,7 +39032,7 @@ async function writeSetup(dir, patch) {
 }
 async function readToken(dir) {
   try {
-    return text3((await readFile3(join4(dir, "token"), "utf8")).trim());
+    return text3((await readFile4(join5(dir, "token"), "utf8")).trim());
   } catch {
     return null;
   }
@@ -38990,21 +39047,48 @@ var init_store = __esm({
     text3 = (v) => typeof v === "string" && v !== "" ? v : null;
     writeToken = (dir, token) => writePrivate(dir, "token", `${token}
 `);
-    deleteToken = (dir) => rm2(join4(dir, "token"), { force: true });
+    deleteToken = (dir) => rm3(join5(dir, "token"), { force: true });
+  }
+});
+
+// plugin/src/site.ts
+import { isIPv4 } from "node:net";
+function safeSite(raw) {
+  try {
+    const url2 = new URL(raw.trim());
+    const { hostname: hostname4 } = url2;
+    const loopback = hostname4 === "localhost" || hostname4 === "[::1]" || isIPv4(hostname4) && hostname4.startsWith("127.");
+    if (url2.protocol !== "https:" && !(url2.protocol === "http:" && loopback)) return null;
+    if (url2.username || url2.password || url2.search || url2.hash) return null;
+    return url2.origin + url2.pathname.replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+function resolveSite(given, env = process.env) {
+  return safeSite(given ?? env.CREATOR_OS_SITE ?? DEFAULT_SITE);
+}
+var DEFAULT_SITE;
+var init_site = __esm({
+  "plugin/src/site.ts"() {
+    "use strict";
+    DEFAULT_SITE = "https://creator-os.stream";
   }
 });
 
 // plugin/src/tools/deps.ts
 async function linkOf(dir) {
   const [setup, token] = await Promise.all([readSetup(dir), readToken(dir)]);
-  const { site, machineId, workspace } = setup;
-  if (!token || !site || !machineId || !workspace) return null;
+  const { machineId, workspace } = setup;
+  const site = setup.site ? safeSite(setup.site) : null;
+  if (!token || site === null || !machineId || !workspace) return null;
   return { site, token, machineId, workspace, setup };
 }
 var NOT_LINKED, REVOKED;
 var init_deps = __esm({
   "plugin/src/tools/deps.ts"() {
     "use strict";
+    init_site();
     init_store();
     NOT_LINKED = "Not linked yet: run pair first.";
     REVOKED = "This link was revoked or idle for 30 days. Run /creator-os:setup again.";
@@ -39026,7 +39110,7 @@ async function refusal(res) {
 async function send(fetcher, url2, init) {
   let res;
   try {
-    res = await fetcher(url2, init);
+    res = await fetcher(url2, { ...init, redirect: "error" });
   } catch (e) {
     throw new NetworkError(e instanceof Error ? e.message : String(e));
   }
@@ -39085,7 +39169,8 @@ function createApi(o) {
       await post(`/jobs/${jobId}/fail`, { lease: lease2, error: error62, retry });
     },
     /** GET a claimed job's media by the `path` the claim gave (`/machine/v1/media/<id>`). */
-    media(path) {
+    async media(path) {
+      if (!path.startsWith("/") || path.startsWith("//")) throw new NetworkError("The site sent an invalid media path.");
       return send(f, `${root(o.site)}${path}`, { headers: { [CONTRACT_HEADER]: String(MACHINE_CONTRACT), authorization: `Bearer ${o.token}` } });
     }
   };
@@ -39193,10 +39278,10 @@ var init_fail = __esm({
 });
 
 // plugin/src/tools/result-file.ts
-import { readFile as readFile4 } from "node:fs/promises";
-import { join as join5 } from "node:path";
+import { readFile as readFile5 } from "node:fs/promises";
+import { join as join6 } from "node:path";
 async function readResultFile(folder) {
-  const text6 = await readFile4(join5(folder, "result.json"), "utf8").catch(() => null);
+  const text6 = await readFile5(join6(folder, "result.json"), "utf8").catch(() => null);
   if (text6 === null) return bad("result.json is missing from the job folder. Write it, then call complete again.");
   let parsed;
   try {
@@ -39299,8 +39384,8 @@ var init_complete = __esm({
 });
 
 // machine/job-context.ts
-import { mkdir as mkdir2, stat as stat3, symlink } from "node:fs/promises";
-import { join as join6, resolve as resolve2 } from "node:path";
+import { mkdir as mkdir3, stat as stat3, symlink } from "node:fs/promises";
+import { join as join7, resolve as resolve2 } from "node:path";
 function spendLines(type, cap) {
   if (isFree(type)) return ["- This job spends nothing."];
   if (cap === void 0) {
@@ -39317,8 +39402,8 @@ async function linkSkills(folder, dir) {
   const abs = resolve2(dir);
   const isDir = await stat3(abs).then((s2) => s2.isDirectory(), () => false);
   if (!isDir) return false;
-  await mkdir2(join6(folder, ".claude"), { recursive: true });
-  await symlink(abs, join6(folder, ".claude", "skills"), "dir");
+  await mkdir3(join7(folder, ".claude"), { recursive: true });
+  await symlink(abs, join7(folder, ".claude", "skills"), "dir");
   return true;
 }
 var FREE, isFree;
@@ -39332,8 +39417,8 @@ var init_job_context = __esm({
 
 // machine/job-folder.ts
 import { createWriteStream } from "node:fs";
-import { mkdir as mkdir3, readFile as readFile5, rm as rm3, writeFile as writeFile2 } from "node:fs/promises";
-import { join as join7 } from "node:path";
+import { mkdir as mkdir4, mkdtemp as mkdtemp2, readFile as readFile6, writeFile as writeFile3 } from "node:fs/promises";
+import { join as join8 } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable as Readable2 } from "node:stream";
 function jobMarkdown(brief, job, extra = []) {
@@ -39363,23 +39448,33 @@ function jobMarkdown(brief, job, extra = []) {
     ""
   ].join("\n");
 }
+async function createJobFolder(jobsDir, id) {
+  await mkdir4(jobsDir, { recursive: true });
+  const folder = join8(jobsDir, id);
+  try {
+    await mkdir4(folder, { mode: 448 });
+    return folder;
+  } catch (e) {
+    if (!(e instanceof Error && "code" in e && e.code === "EEXIST")) throw e;
+    return mkdtemp2(`${folder}.`);
+  }
+}
 async function prepareFolder(o) {
   const { job, api } = o;
   if (![job.id, ...Object.keys(job.media)].every((id) => SAFE_ID.test(id))) throw new Error("The job has an id this computer will not use as a folder name.");
-  const folder = join7(o.jobsDir, job.id);
-  await rm3(folder, { recursive: true, force: true });
-  await mkdir3(join7(folder, "inputs"), { recursive: true });
-  await mkdir3(join7(folder, "outputs"), { recursive: true });
+  const folder = await createJobFolder(o.jobsDir, job.id);
+  await mkdir4(join8(folder, "inputs"));
+  await mkdir4(join8(folder, "outputs"));
   const { lease: _lease, ...withoutLease } = job;
-  await writeFile2(join7(folder, "job.json"), `${JSON.stringify(withoutLease, null, 2)}
+  await writeFile3(join8(folder, "job.json"), `${JSON.stringify(withoutLease, null, 2)}
 `);
-  const brief = await readFile5(join7(o.briefsDir ?? BRIEFS_DIR, `${job.type}.md`), "utf8");
+  const brief = await readFile6(join8(o.briefsDir ?? BRIEFS_DIR, `${job.type}.md`), "utf8");
   const linked = await linkSkills(folder, o.skillsDir);
-  const extra = [...skillLines(linked ? o.skillsDir : void 0), ...o.spend ?? spendLines(job.type, o.spendCap)];
-  await writeFile2(join7(folder, "JOB.md"), jobMarkdown(brief, job, extra));
+  const extra = [...skillLines(linked ? o.skillsDir : void 0), ...o.spend ?? spendLines(job.type, o.spendCap), ...o.extra ?? []];
+  await writeFile3(join8(folder, "JOB.md"), jobMarkdown(brief, job, extra));
   for (const [id, m] of Object.entries(job.media)) {
     const res = await api.media(m.path);
-    const dest = join7(folder, inputName(id, m.type));
+    const dest = join8(folder, inputName(id, m.type));
     await pipeline(Readable2.fromWeb(res.body), createWriteStream(dest));
     if (await sha256File(dest) !== m.sha256) throw new Error(`The download of ${id} does not match its sha256.`);
   }
@@ -39391,7 +39486,7 @@ var init_job_folder = __esm({
     "use strict";
     init_job_context();
     init_upload();
-    BRIEFS_DIR = join7(import.meta.dirname, "briefs");
+    BRIEFS_DIR = join8(import.meta.dirname, "briefs");
     EXT = {
       "image/png": "png",
       "image/jpeg": "jpg",
@@ -39427,8 +39522,8 @@ var init_progress = __esm({
 });
 
 // plugin/src/keeper.ts
-import { readFile as readFile6 } from "node:fs/promises";
-import { join as join8 } from "node:path";
+import { readFile as readFile7 } from "node:fs/promises";
+import { join as join9 } from "node:path";
 function createKeeper(deps, runner) {
   let timer = null;
   let inflight = Promise.resolve();
@@ -39448,7 +39543,7 @@ function createKeeper(deps, runner) {
       if (cleared || await readHeld(deps.dataDir) === null) stop();
       return "dropped";
     };
-    const report = runner.progress ?? readProgress(await readFile6(join8(held.folder, "progress.json"), "utf8").catch(() => ""));
+    const report = runner.progress ?? readProgress(await readFile7(join9(held.folder, "progress.json"), "utf8").catch(() => ""));
     const running = { id: held.id, lease: held.lease, ...report ? { phase: report.phase } : {}, ...report?.pct === void 0 ? {} : { pct: report.pct } };
     try {
       const api = await deps.apiOf();
@@ -39515,14 +39610,14 @@ var init_runner = __esm({
 });
 
 // plugin/src/tools/resume.ts
-import { readFile as readFile7 } from "node:fs/promises";
-import { join as join9 } from "node:path";
+import { readFile as readFile8 } from "node:fs/promises";
+import { join as join10 } from "node:path";
 async function resume(deps, runner, link, held) {
   if (await runner.keeper.beat() === "dropped") return null;
   runner.keeper.start();
   runner.dropped = null;
   runner.progress = null;
-  const jobMd = await readFile7(join9(held.folder, "JOB.md"), "utf8").catch(() => null);
+  const jobMd = await readFile8(join10(held.folder, "JOB.md"), "utf8").catch(() => null);
   if (jobMd === null) {
     const error62 = { what: "The job folder was lost on this computer", why: "JOB.md is missing from the job folder", todo: "It goes back in the queue" };
     await failHeld(deps, runner, link, held, error62, true).catch(async (e) => {
@@ -39531,12 +39626,23 @@ async function resume(deps, runner, link, held) {
     });
     return null;
   }
+  const { type } = held;
+  if (isJobType(type) && (await recipesFor(held.folder, type)).some((recipe) => recipe.text === null)) {
+    await failHeld(deps, runner, link, held, {
+      what: "The job folder is missing its media recipes",
+      why: "This attempt was prepared without a complete set of recipes.",
+      todo: "Run /creator-os:setup if the next attempt still needs a recipe."
+    }, true);
+    return null;
+  }
   return jobAnswer(`Job ${held.id} (${held.type}, attempt ${held.attempt}) is still yours.`, held.folder, jobMd);
 }
 var WORK_LINE, jobAnswer;
 var init_resume = __esm({
   "plugin/src/tools/resume.ts"() {
     "use strict";
+    init_jobs();
+    init_recipes();
     init_fail();
     init_job_errors();
     WORK_LINE = "Work only in that folder. Write progress.json as you go and result.json when done, then call complete.";
@@ -39548,14 +39654,14 @@ ${jobMd}`;
 });
 
 // plugin/src/tools/claim-next.ts
-import { readFile as readFile8 } from "node:fs/promises";
-import { join as join10 } from "node:path";
+import { readFile as readFile9, writeFile as writeFile4, mkdir as mkdir5 } from "node:fs/promises";
+import { join as join11 } from "node:path";
 async function giveUp(api, job, error62, retry) {
   await api.fail(job.id, job.lease, error62, retry).catch((e) => {
     if (!isGone(e)) throw e;
   });
 }
-async function start(deps, runner, link, api, job) {
+async function start(deps, runner, link, api, job, recipes) {
   if (!isJobType(job.type)) {
     await giveUp(api, job, { what: "The job type is not known to this plugin", why: `${job.type} is not a type this plugin can do`, todo: "Update the plugin, then Retry" }, false);
     return null;
@@ -39574,8 +39680,13 @@ async function start(deps, runner, link, api, job) {
       api,
       briefsDir: deps.briefsDir,
       ...deps.skillsDir === void 0 ? {} : { skillsDir: deps.skillsDir },
-      spend: isFree(job.type) ? spendLines(job.type, void 0) : [PAID_SPEND]
+      spend: recipes.length === 0 ? ["- This job spends nothing."] : [PAID_SPEND],
+      extra: recipes.map(({ kind, file: file2 }) => "- Recipe (" + kind + "): " + file2)
     });
+    if (recipes.length > 0) {
+      await mkdir5(join11(folder, "recipes"), { mode: 448 });
+      await Promise.all(recipes.map(({ file: file2, text: text6 }) => text6 === null ? void 0 : writeFile4(join11(folder, file2), text6, { mode: 384 })));
+    }
   } catch (e) {
     if (!(e instanceof Error) || e instanceof ApiError && (e.status === 401 || e.status === 426)) throw e;
     await giveUp(api, job, { what: "The job folder could not be prepared", why: e.message.slice(0, 600), todo: "It goes back in the queue" }, true);
@@ -39588,13 +39699,20 @@ async function start(deps, runner, link, api, job) {
   runner.progress = null;
   runner.emptyStreak = 0;
   runner.keeper.start();
-  return jobAnswer(`Job ${job.id} (${job.type}, attempt ${job.attempt}) is yours.`, folder, await readFile8(join10(folder, "JOB.md"), "utf8"));
+  return jobAnswer(`Job ${job.id} (${job.type}, attempt ${job.attempt}) is yours.`, folder, await readFile9(join11(folder, "JOB.md"), "utf8"));
 }
 async function claimNext(deps, runner, link, filters) {
   const api = apiOf(deps, link);
   const { jobs } = await api.waiting(10);
   const offers = jobs.filter((j) => (filters.type === void 0 || j.type === filters.type) && (filters.personaId === void 0 || j.personaId === filters.personaId));
+  const waiting = /* @__PURE__ */ new Map();
   for (const offer of offers) {
+    const recipes = isJobType(offer.type) ? await recipesFor(deps.dataDir, offer.type) : [];
+    const missing = recipes.find((recipe) => recipe.text === null);
+    if (missing !== void 0) {
+      waiting.set(missing.kind, (waiting.get(missing.kind) ?? 0) + 1);
+      continue;
+    }
     let job;
     try {
       job = await api.claimJob(offer.id, void 0, PLUGIN_VERSION);
@@ -39603,10 +39721,10 @@ async function claimNext(deps, runner, link, filters) {
       if (e instanceof ApiError && e.status === 429) return DAILY_LIMIT;
       throw e;
     }
-    const answer = await start(deps, runner, link, api, job);
+    const answer = await start(deps, runner, link, api, job, recipes);
     if (answer !== null) return answer;
   }
-  return empty(runner, filters.watch);
+  return waiting.size === 0 ? empty(runner, filters.watch) : [...waiting].map(([kind, count]) => recipeWaitMessage(kind, count)).join("\n");
 }
 var PAID_SPEND, WAITS, DAILY_LIMIT, empty;
 var init_claim_next = __esm({
@@ -39614,10 +39732,10 @@ var init_claim_next = __esm({
     "use strict";
     init_api2();
     init_config();
-    init_job_context();
     init_job_folder();
     init_jobs();
     init_held();
+    init_recipes();
     init_runner();
     init_store();
     init_job_errors();
@@ -39847,6 +39965,7 @@ function enumsOf(setup) {
 function skipReason(setup, job) {
   const cap = setup.spendCap ?? 0;
   if (!toolReady(setup, job.kind)) return `Skipped: the ${job.kind} tool is missing or its last check failed. Run /creator-os:setup again.`;
+  if (job.cost === 0) return null;
   if (cap <= 0) return "Skipped: the spend cap is 0 (no spending). Run /creator-os:setup to allow credits.";
   if (job.spent + job.cost > cap) return `Skipped: the spend cap is reached (${job.spent} of ${cap} credits used, this job needs ${job.cost}).`;
   return null;
@@ -39905,31 +40024,12 @@ var init_disconnect = __esm({
   }
 });
 
-// plugin/src/site.ts
-function resolveSite(given, env = process.env) {
-  const raw = (given ?? env.CREATOR_OS_SITE ?? DEFAULT_SITE).trim();
-  try {
-    const url2 = new URL(raw);
-    if (url2.protocol !== "https:" && url2.protocol !== "http:") return null;
-  } catch {
-    return null;
-  }
-  return raw.replace(/\/+$/, "");
-}
-var DEFAULT_SITE;
-var init_site = __esm({
-  "plugin/src/site.ts"() {
-    "use strict";
-    DEFAULT_SITE = "https://dev-creator-os.archimedes-ai-agent.workers.dev";
-  }
-});
-
 // plugin/src/tools/pair.ts
 async function pairTool(deps, input2) {
   const site = resolveSite(input2.site);
-  if (site === null) return "That site address is not a web address. Use the full address, for example https://example.com.";
+  if (site === null) return "Use a Creator OS site address starting with https://. For local development, http:// is allowed on loopback addresses.";
   const saved = await readSetup(deps.dataDir);
-  const oldToken = saved.site === site ? await readToken(deps.dataDir) ?? void 0 : void 0;
+  const oldToken = saved.site && safeSite(saved.site) === site ? await readToken(deps.dataDir) ?? void 0 : void 0;
   const name = `Claude on ${deps.hostname}`.slice(0, NAME_MAX);
   try {
     const got = await pair(site, input2.code.trim(), name, deps.fetch, oldToken, enumsOf(saved));
@@ -39980,22 +40080,27 @@ var init_save_setup = __esm({
 });
 
 // plugin/src/tools/status.ts
+import { join as join12 } from "node:path";
 async function statusTool(deps, input2) {
   const link = await linkOf(deps.dataDir);
-  if (link === null) return "Not linked. Run /creator-os:setup to link a studio.";
+  const paths = await Promise.all(RECIPE_KINDS.map(async (kind) => await readRecipe(deps.dataDir, kind).catch(() => null) === null ? null : kind + ": " + join12(deps.dataDir, recipeFile(kind))));
+  const recipes = paths.filter((path) => path !== null);
+  const saved = recipes.length ? "\nRecipes:\n" + recipes.join("\n") : "";
+  if (link === null) return "Not linked. Run /creator-os:setup to link a studio." + saved;
   const line = `Linked to ${link.workspace.name} on ${link.site}. Work last ran: ${link.setup.lastWorkAt ?? "never"}.`;
-  if (input2.waiting !== true) return line;
+  const local = "\nJobs folder: " + (link.setup.jobsDir ?? defaultJobsDir()) + saved;
+  if (input2.waiting !== true) return line + local;
   try {
     const { jobs } = await createApi({ site: link.site, token: link.token, fetch: deps.fetch }).waiting(10);
-    return `${line} ${jobs.length >= 10 ? "10 or more jobs waiting" : plural2(jobs.length)}.`;
+    return `${line} ${jobs.length >= 10 ? "10 or more jobs waiting" : plural2(jobs.length)}.` + local;
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) {
       await deleteToken(deps.dataDir);
       await writeSetup(deps.dataDir, { machineId: null, workspace: null });
       return REVOKED;
     }
-    if (e instanceof NetworkError) return `${line} The site could not be reached to count waiting jobs.`;
-    if (e instanceof ApiError) return `${line} ${e.message}`;
+    if (e instanceof NetworkError) return `${line} The site could not be reached to count waiting jobs.` + local;
+    if (e instanceof ApiError) return `${line} ${e.message}` + local;
     throw e;
   }
 }
@@ -40004,6 +40109,8 @@ var init_status = __esm({
   "plugin/src/tools/status.ts"() {
     "use strict";
     init_api2();
+    init_config();
+    init_recipes();
     init_store();
     init_deps();
     plural2 = (n) => n === 1 ? "1 job waiting" : `${n} jobs waiting`;
@@ -40035,18 +40142,23 @@ function createServer(deps) {
     description: "Record what this session found when it tried each picture, video or voice tool, and the spend cap in credits (0 = no spending). Answers the setup enums and what is missing. With job set, say whether a paid job may run or must be skipped.",
     inputSchema: {
       tools: external_exports.array(external_exports.object({
-        kind: external_exports.enum(["images", "video", "voice"]),
+        kind: external_exports.enum(RECIPE_KINDS),
         tool: external_exports.string().describe("The tool, for example higgsfield."),
         answers: external_exports.boolean().describe("True only when a call to the tool just worked."),
         balance: external_exports.number().optional().describe("Credits left, when the tool can say.")
       })).optional(),
       spendCap: external_exports.number().optional().describe("Credits allowed per run of /creator-os:work; 0 means no spending."),
-      job: external_exports.object({ kind: external_exports.enum(["images", "video", "voice"]), cost: external_exports.number().describe("Credits the job is expected to use."), spent: external_exports.number().describe("Credits already used in this run.") }).optional()
+      job: external_exports.object({ kind: external_exports.enum(RECIPE_KINDS), cost: external_exports.number().nonnegative().describe("Credits the job is expected to use."), spent: external_exports.number().nonnegative().describe("Credits already used in this run.") }).optional()
     }
   }, async (input2) => text5(await checkToolsTool(deps, input2)));
+  server2.registerTool("save_recipe", {
+    title: "Save a tested media recipe",
+    description: "Save the working steps after a successful setup generation. The private recipe survives plugin updates. Leave out passwords, tokens and other secrets.",
+    inputSchema: { kind: external_exports.enum(RECIPE_KINDS), text: external_exports.string().max(24e3) }
+  }, async (input2) => text5(await saveRecipe(deps.dataDir, input2)));
   server2.registerTool("status", {
     title: "Show the link",
-    description: "Say whether this computer is linked to a studio and when work last ran. Calls the site only with waiting set to true.",
+    description: "Say whether this computer is linked to a studio when work last ran, the jobs folder and the saved recipe paths. Calls the site only with waiting set to true.",
     inputSchema: { waiting: external_exports.boolean().optional().describe("Also count the jobs waiting for you (one call to the site).") }
   }, async (input2) => text5(await statusTool(deps, input2)));
   server2.registerTool("disconnect", {
@@ -40064,6 +40176,7 @@ var init_mcp2 = __esm({
     init_mcp();
     init_zod();
     init_plugin();
+    init_recipes();
     init_register_jobs();
     init_runner();
     init_check_tools();
@@ -40098,20 +40211,20 @@ if (nodeTooOld(process.versions.node)) {
 `);
   process.exit(1);
 }
-var [{ StdioServerTransport: StdioServerTransport2 }, { hostname: hostname3 }, { join: join11 }, { createServer: createServer2 }, { dataDirOf: dataDirOf2 }] = await Promise.all([
+var [{ StdioServerTransport: StdioServerTransport2 }, { hostname: hostname3 }, { join: join13 }, { createServer: createServer2 }, { dataDirOf: dataDirOf2 }] = await Promise.all([
   Promise.resolve().then(() => (init_stdio2(), stdio_exports)),
   import("node:os"),
   import("node:path"),
   Promise.resolve().then(() => (init_mcp2(), mcp_exports)),
   Promise.resolve().then(() => (init_store(), store_exports))
 ]);
-var skillsDir = join11(import.meta.dirname, "..", "skills");
+var skillsDir = join13(import.meta.dirname, "..", "skills");
 var server = createServer2({
   dataDir: dataDirOf2(),
   fetch: (url2, init) => fetch(url2, init),
   hostname: hostname3(),
   now: () => (/* @__PURE__ */ new Date()).toISOString(),
-  briefsDir: join11(import.meta.dirname, "briefs"),
+  briefsDir: join13(import.meta.dirname, "briefs"),
   ...existsSync(skillsDir) ? { skillsDir } : {}
 });
 var transport = new StdioServerTransport2();

@@ -50,7 +50,7 @@ The run prints a report. Its `caption match: 0.93` line is the share of the scri
 
 ## Tools
 
-- **ffmpeg built with libass** (it has the `ass` filter): `FFMPEG_FULL` when that variable is set, else the `ffmpeg` on PATH. Some packages ship ffmpeg without libass; the script then stops and says so. To point it at one that has libass: on macOS with Homebrew, `brew install ffmpeg-full`, then `FFMPEG_FULL="$(brew --prefix ffmpeg-full)/bin/ffmpeg"`; elsewhere install a build with libass and set `FFMPEG_FULL` to its path.
+- **ffmpeg built with libass** (it has the `ass` filter). The script uses `FFMPEG_FULL` when set, then checks the `ffmpeg` on PATH. If the PATH build lacks libass or is missing, it looks for Homebrew’s `ffmpeg-full`. On macOS install it with `brew install ffmpeg-full`.
 - **`whisper`** (the openai-whisper CLI) on PATH for spoken mode: `pip install openai-whisper`, or your package manager. The first run downloads the model (about 460 MB).
 - A missing tool is an error with `retry: false` that names the tool and how to get it (the brief's error shape).
 

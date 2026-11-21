@@ -6,6 +6,8 @@ Skills to use: `ugc-influencer-video` (its voice step).
 
 ## What to do
 
+In the Claude Code plugin, use the voice recipe listed under “This job” for voice samples.
+
 Make three short voice samples (5 to 12 seconds each) of the persona reading `input.signoff` plus one natural sentence. `input.voice` describes accent, age, delivery, texture, a seed line and a rule. The three samples differ in delivery but all fit the description.
 
 ## Write `result.json`

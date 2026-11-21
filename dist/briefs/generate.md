@@ -6,7 +6,9 @@ Skills to use: `ugc-influencer-video`, `video-prompting` where it helps.
 
 ## What to do
 
-Generate one raw vertical (9:16) take of the persona saying `input.script.lines` following `input.beats`. The Soul ID is `input.kit.soulRef`; the voice reference, when set, is `input.kit.voiceRef`. The portrait, the character sheet and the location pictures are in `inputs/` (media ids in `input.kit`). `input.attempt` is the attempt number; `input.note`, when present, is what to fix from `input.previousTake` (also in `inputs/`). `input.kit.shotPreset` holds the owner's own prompt text for this format.
+In the Claude Code plugin, use the images recipe for the start still, the video recipe for shots and the voice recipe for its voice-change choice.
+
+Generate one raw vertical (9:16) take of the persona saying `input.script.lines` following `input.beats`. When `input.kit.soulType` is `reference`, use the portrait, character sheet and profile in `inputs/` as image references for the start still, with the likeness anchors verbatim. Otherwise use the trained `input.kit.soulRef` where supported. In either case, the voice reference, when set, is `input.kit.voiceRef`. The portrait, the character sheet and the location pictures are in `inputs/` (media ids in `input.kit`). `input.attempt` is the attempt number; `input.note`, when present, is what to fix from `input.previousTake` (also in `inputs/`). `input.kit.shotPreset` holds the owner's own prompt text for this format.
 
 ## Write `result.json`
 
@@ -25,7 +27,7 @@ The client uploads it as a `take` and swaps the name for the media id. `spend` i
 
 ## Quality rules
 
-- Anchors verbatim in every prompt; the face must match the sheet and Soul ID. Check frames before you ship.
+- Anchors verbatim in every prompt; the face must match the sheet and the selected face reference. Check frames before you ship.
 - No silent clips: the take has speech audio for the whole script. No text overlays or watermarks.
 - The first and last frames use the loop pose from the beat sheet.
 - Spending: follow the Spend line under "This job" below. It says whether the owner approved spending for this job and up to how many credits.
